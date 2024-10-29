@@ -85,4 +85,36 @@ class DatabaseOpenHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_
         db.close()
         return usersList
     }
+
+    fun deleteUser(id: Int): Boolean {
+        val db = writableDatabase
+        return try {
+            val result = db.delete(TABLE_NAME, "$COLUMN_ID=?", arrayOf(id.toString()))
+            db.close()
+            result > 0
+        } catch (e: Exception) {
+            db.close()
+            false
+        }
+    }
+
+    fun updateUser(id: Int, name: String, lastname: String, age: Int, gender: String, phone: String, email: String): Boolean {
+        val db = writableDatabase
+        val values = ContentValues().apply {
+            put(COLUMN_NAME, name)
+            put(COLUMN_LASTNAME, lastname)
+            put(COLUMN_AGE, age)
+            put(COLUMN_GENDER, gender)
+            put(COLUMN_PHONE, phone)
+            put(COLUMN_EMAIL, email)
+        }
+        return try {
+            val result = db.update(TABLE_NAME, values, "$COLUMN_ID=?", arrayOf(id.toString()))
+            db.close()
+            result > 0
+        } catch (e: Exception) {
+            db.close()
+            false
+        }
+    }
 }

@@ -15,10 +15,12 @@ import androidx.compose.ui.unit.dp
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -59,9 +61,9 @@ class MainActivity : ComponentActivity() {
         var phone by remember { mutableStateOf("") }
         var email by remember { mutableStateOf("") }
 
-
-
         var users by remember { mutableStateOf(dbHelper.getAllUsers()) }
+
+        var editingUserId by remember { mutableStateOf<Int?>(null) }
 
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(50.dp),) {
@@ -131,28 +133,62 @@ class MainActivity : ComponentActivity() {
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Button(onClick = {
-                    if(dbHelper.insertUser(name, lastname, age.toIntOrNull() ?: 0, gender, phone, email)) {
-                        Toast.makeText(this@MainActivity, "User added", Toast.LENGTH_LONG).show()
-                        users = dbHelper.getAllUsers()
+                    if (editingUserId == null) {
+                        if(dbHelper.insertUser(name, lastname, age.toIntOrNull() ?: 0, gender, phone, email)) {
+                            Toast.makeText(this@MainActivity, "User added", Toast.LENGTH_LONG).show()
+                            users = dbHelper.getAllUsers()
 
-                        name = ""
-                        lastname = ""
-                        age = ""
-                        gender = ""
-                        phone = ""
-                        email = ""
+                            name = ""
+                            lastname = ""
+                            age = ""
+                            gender = ""
+                            phone = ""
+                            email = ""
+                        } else {
+                            Toast.makeText(this@MainActivity, "Error adding user", Toast.LENGTH_LONG).show()
+                        }
                     } else {
-                        Toast.makeText(this@MainActivity, "Error adding user", Toast.LENGTH_LONG).show()
+                        if (dbHelper.updateUser(editingUserId!!, name, lastname, age.toIntOrNull() ?: 0, gender, phone, email)) {
+                            Toast.makeText(this@MainActivity, "User updated", Toast.LENGTH_LONG).show()
+                            users = dbHelper.getAllUsers()
+
+                            name = ""
+                            lastname = ""
+                            age = ""
+                            gender = ""
+                            phone = ""
+                            email = ""
+                        } else {
+                            Toast.makeText(this@MainActivity, "Error updating user", Toast.LENGTH_LONG).show()
+                        }
                     }
                 }) {
-                    Text("Add User")
+                    Text(text = if (editingUserId == null) "Add User" else "Update User")
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     items(users) { user ->
-                        UserRow(user)
+                        UserRow(user = user,
+                            onDelete = {
+                                if (dbHelper.deleteUser(user["id"]!!.toInt())) {
+                                    users = dbHelper.getAllUsers()
+                                    Toast.makeText(this@MainActivity, "User deleted", Toast.LENGTH_LONG).show()
+                                } else {
+                                    Toast.makeText(this@MainActivity, "Error deleting user", Toast.LENGTH_LONG).show()
+                                }
+                            },
+                            onEdit = {
+                                editingUserId = user["id"]?.toIntOrNull()
+                                name = user["name"] ?: ""
+                                lastname = user["lastname"] ?: ""
+                                age = user["age"] ?: ""
+                                gender = user["gender"] ?: ""
+                                phone = user["phone"] ?: ""
+                                email = user["email"] ?: ""
+                            }
+                        )
                     }
                 }
 
@@ -161,7 +197,7 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun UserRow(user: Map<String, Any>) {
+    fun UserRow(user: Map<String, Any>, onDelete: () -> Unit, onEdit: () -> Unit) {
         Column(modifier = Modifier.padding(8.dp).fillMaxWidth()) {
             Text("Name: ${user["name"]}")
             Text("Lastname: ${user["lastname"]}")
@@ -169,6 +205,15 @@ class MainActivity : ComponentActivity() {
             Text("Gender: ${user["gender"]}")
             Text("Phone: ${user["phone"]}")
             Text("Email: ${user["email"]}")
+            Row {
+                Button(onClick = onEdit) {
+                    Text("Edit")
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(onClick = onDelete) {
+                    Text("Delete")
+                }
+            }
             Spacer(modifier = Modifier.height(8.dp))
         }
     }
